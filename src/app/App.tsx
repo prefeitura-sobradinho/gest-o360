@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { supabase } from './lib/supabaseClient';
 import {
   LayoutDashboard, HardHat, BookOpen, HeartPulse, Users, Music,
   TrendingUp, CheckCircle, Activity, Award,
@@ -187,29 +188,26 @@ function DonutChart({ data }: { data: { nome: string; valor: number; cor: string
   );
 }
 
-/* ── SENHA ADMIN (troque aqui antes de publicar) ── */
-const ADMIN_PASSWORD = 'gestao2026';
-
-/* ── MODAL DE LOGIN ── */
+/* ── MODAL DE LOGIN (via Supabase Auth) ── */
 function LoginModal({ onSuccess, onClose }: { onSuccess: () => void; onClose: () => void }) {
+  const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [mostrar, setMostrar] = useState(false);
   const [erro, setErro] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const tentar = (e: React.FormEvent) => {
+  const tentar = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      if (senha === ADMIN_PASSWORD) {
-        localStorage.setItem('g360_admin', '1');
-        onSuccess();
-      } else {
-        setErro(true);
-        setLoading(false);
-        setSenha('');
-      }
-    }, 400);
+    const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+    setLoading(false);
+    if (error) {
+      setErro(true);
+      setSenha('');
+    } else {
+      onSuccess();
+    }
+
   };
 
   return (
@@ -225,6 +223,17 @@ function LoginModal({ onSuccess, onClose }: { onSuccess: () => void; onClose: ()
         </div>
 
         <form onSubmit={tentar} className="modal-form">
+          <div>
+            <label className="modal-label">E-mail</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => { setEmail(e.target.value); setErro(false); }}
+              placeholder="seu@email.com"
+              className="modal-input"
+            />
+          </div>
+
           <div>
             <label className="modal-label">Senha de acesso</label>
             <div className="modal-input-wrap">
@@ -257,7 +266,13 @@ function LoginModal({ onSuccess, onClose }: { onSuccess: () => void; onClose: ()
 /* ── APP ── */
 export default function Gestao360() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [modoAdmin, setModoAdmin] = useState(() => localStorage.getItem('g360_admin') === '1');
+  const [modoAdmin, setModoAdmin] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setModoAdmin(!!session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setModoAdmin(!!session));
+    return () => listener.subscription.unsubscribe();
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [busca, setBusca] = useState('');
   const [showLogin, setShowLogin] = useState(false);
@@ -267,8 +282,8 @@ export default function Gestao360() {
   const itemAtivo = secretariasMenu.find(i => i.id === activeTab);
   const navigateTo = (id: string) => { setActiveTab(id); setSidebarOpen(false); };
 
-  const fazerLogout = () => {
-    localStorage.removeItem('g360_admin');
+  const fazerLogout = async () => {
+    await supabase.auth.signOut();
     setModoAdmin(false);
   };
 
