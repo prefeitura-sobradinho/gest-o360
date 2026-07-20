@@ -261,6 +261,54 @@ function LoginModal({ onSuccess, onClose }: { onSuccess: () => void; onClose: ()
       </div>
     </div>
   );
+} 
+/* ── MODAL DE DESTAQUE (novo / editar) ── */
+function DestaqueModal({ secretariaId, destaque, onClose, onSaved }: { secretariaId: string; destaque: any | null; onClose: () => void; onSaved: () => void }) {
+  const [titulo, setTitulo] = useState(destaque?.titulo || '');
+  const [desc, setDesc] = useState(destaque?.desc || '');
+  const [loading, setLoading] = useState(false);
+
+  const salvar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!titulo.trim() || !desc.trim()) return;
+    setLoading(true);
+    if (destaque?.id) {
+      await supabase.from('destaques').update({ titulo, descricao: desc }).eq('id', destaque.id);
+    } else {
+      await supabase.from('destaques').insert({ secretaria_id: secretariaId, titulo, descricao: desc });
+    }
+    setLoading(false);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-emblem"><Edit3 size={18} /></div>
+          <div>
+            <h2 className="modal-title">{destaque ? 'Editar Destaque' : 'Novo Destaque'}</h2>
+            <p className="modal-sub">Gestão360 · Prefeitura de Sobradinho-BA</p>
+          </div>
+          <button onClick={onClose} className="modal-close"><X size={17} /></button>
+        </div>
+        <form onSubmit={salvar} className="modal-form">
+          <div>
+            <label className="modal-label">Título</label>
+            <input type="text" value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título do destaque" className="modal-input" autoFocus />
+          </div>
+          <div>
+            <label className="modal-label">Descrição</label>
+            <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Descrição do destaque" className="modal-input" rows={4} />
+          </div>
+          <button type="submit" disabled={!titulo.trim() || !desc.trim() || loading} className="modal-btn-submit">
+            {loading ? <span className="modal-spinner" /> : 'Salvar'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 /* ── APP ── */
@@ -273,6 +321,29 @@ export default function Gestao360() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setModoAdmin(!!session));
     return () => listener.subscription.unsubscribe();
   }, []);
+  /* ── DESTAQUES (Supabase) ── */
+  const [destaquesDb, setDestaquesDb] = useState<Record<string, any[]>>({});
+  const [editandoDestaque, setEditandoDestaque] = useState<{ secretariaId: string; destaque: any | null } | null>(null);
+
+  const carregarDestaques = async () => {
+    const { data, error } = await supabase.from('destaques').select('*').order('ordem', { ascending: true });
+    if (!error && data) {
+      const agrupado: Record<string, any[]> = {};
+      data.forEach((row: any) => {
+        if (!agrupado[row.secretaria_id]) agrupado[row.secretaria_id] = [];
+        agrupado[row.secretaria_id].push({ id: row.id, titulo: row.titulo, desc: row.descricao });
+      });
+      setDestaquesDb(agrupado);
+    }
+  };
+
+  useEffect(() => { carregarDestaques(); }, []);
+
+  const excluirDestaque = async (destaqueId: string) => {
+    if (!confirm('Excluir este destaque?')) return;
+    await supabase.from('destaques').delete().eq('id', destaqueId);
+    carregarDestaques();
+  };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [busca, setBusca] = useState('');
   const [showLogin, setShowLogin] = useState(false);
@@ -514,6 +585,7 @@ export default function Gestao360() {
   const renderSecretaria = (id: string) => {
     const s = secretariasData[id];
     if (!s) return null;
+    const listaDestaques = destaquesDb[id]?.length ? destaquesDb[id] : s.destaques;
     return (
       <div className="space-y-5 max-w-5xl">
         <div className="flex items-start gap-4">
@@ -542,14 +614,19 @@ export default function Gestao360() {
           <div className="lg:col-span-2 panel">
             <div className="flex justify-between items-center mb-5">
               <h3 className="panel-title">Destaques e Ações</h3>
-              {modoAdmin && <button onClick={() => handleSimulateEdit(`Novo destaque — ${s.titulo}`)} className="btn-ghost-sm"><PlusCircle size={12} className="mr-1" /> Adicionar</button>}
+              {modoAdmin && <button onClick={() => setEditandoDestaque({ secretariaId: id, destaque: null })} className="btn-ghost-sm"><PlusCircle size={12} className="mr-1" /> Adicionar</button>}
             </div>
             <div className="space-y-3">
-              {s.destaques.map((d: any, i: number) => (
-                <div key={`dest-${i}`} className="card-flat-sm">
+              {listaDestaques.map((d: any, i: number) => (
+                <div key={d.id || `dest-${i}`} className="card-flat-sm">
                   <h4 className="font-bold text-ink font-display text-sm flex items-center"><ChevronRight size={14} className={`mr-1.5 shrink-0 cor-${s.tom}`} /> {d.titulo}</h4>
                   <p className="text-xs text-muted mt-1.5 ml-5 leading-relaxed">{d.desc}</p>
-                  {modoAdmin && <div className="mt-2 ml-5 flex justify-end"><button onClick={() => handleSimulateEdit(d.titulo)} className="text-xs font-bold text-orange hover:text-ink flex items-center gap-1 transition-colors"><Edit3 size={11} /> Editar</button></div>}
+                  {modoAdmin && d.id && (
+                    <div className="mt-2 ml-5 flex justify-end gap-3">
+                      <button onClick={() => setEditandoDestaque({ secretariaId: id, destaque: d })} className="text-xs font-bold text-orange hover:text-ink flex items-center gap-1 transition-colors"><Edit3 size={11} /> Editar</button>
+                      <button onClick={() => excluirDestaque(d.id)} className="text-xs font-bold text-alerta hover:text-ink flex items-center gap-1 transition-colors">Excluir</button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -582,6 +659,14 @@ export default function Gestao360() {
         <LoginModal
           onSuccess={() => { setModoAdmin(true); setShowLogin(false); }}
           onClose={() => setShowLogin(false)}
+        />
+      )}
+      {editandoDestaque && (
+        <DestaqueModal
+          secretariaId={editandoDestaque.secretariaId}
+          destaque={editandoDestaque.destaque}
+          onClose={() => setEditandoDestaque(null)}
+          onSaved={carregarDestaques}
         />
       )}
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
