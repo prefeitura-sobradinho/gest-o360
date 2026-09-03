@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { supabase } from './lib/supabaseClient';
+import { auth, db } from './lib/firebaseClient';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import {
   LayoutDashboard, HardHat, BookOpen, HeartPulse, Users, Music,
   TrendingUp, CheckCircle, Activity, Award,
@@ -199,14 +201,14 @@ function LoginModal({ onSuccess, onClose }: { onSuccess: () => void; onClose: ()
   const tentar = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
-    setLoading(false);
-    if (error) {
+        try {
+      await signInWithEmailAndPassword(auth, email, senha);
+      onSuccess();
+    } catch (err) {
       setErro(true);
       setSenha('');
-    } else {
-      onSuccess();
     }
+    setLoading(false);
 
   };
 
@@ -272,10 +274,10 @@ function DestaqueModal({ secretariaId, destaque, onClose, onSaved }: { secretari
     e.preventDefault();
     if (!titulo.trim() || !desc.trim()) return;
     setLoading(true);
-    if (destaque?.id) {
-      await supabase.from('destaques').update({ titulo, descricao: desc }).eq('id', destaque.id);
+        if (destaque?.id) {
+      await updateDoc(doc(db, 'destaques', destaque.id), { titulo, descricao: desc });
     } else {
-      await supabase.from('destaques').insert({ secretaria_id: secretariaId, titulo, descricao: desc });
+      await addDoc(collection(db, 'destaques'), { secretaria_id: secretariaId, titulo, descricao: desc, ordem: 99 });
     }
     setLoading(false);
     onSaved();
@@ -316,32 +318,46 @@ export default function Gestao360() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [modoAdmin, setModoAdmin] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setModoAdmin(!!session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setModoAdmin(!!session));
-    return () => listener.subscription.unsubscribe();
+    useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => setModoAdmin(!!user));
+    return () => unsubscribe();
   }, []);
   /* ── DESTAQUES (Supabase) ── */
   const [destaquesDb, setDestaquesDb] = useState<Record<string, any[]>>({});
   const [editandoDestaque, setEditandoDestaque] = useState<{ secretariaId: string; destaque: any | null } | null>(null);
 
-  const carregarDestaques = async () => {
-    const { data, error } = await supabase.from('destaques').select('*').order('ordem', { ascending: true });
-    if (!error && data) {
+    const carregarDestaques = async () => {
+    try {
+      const snap = await getDocs(query(collection(db, 'destaques'), orderBy('ordem', 'asc')));
       const agrupado: Record<string, any[]> = {};
-      data.forEach((row: any) => {
+      snap.forEach((docSnap) => {
+        const row: any = docSnap.data();
         if (!agrupado[row.secretaria_id]) agrupado[row.secretaria_id] = [];
-        agrupado[row.secretaria_id].push({ id: row.id, titulo: row.titulo, desc: row.descricao });
+        agrupado[row.secretaria_id].push({ id: docSnap.id, titulo: row.titulo, desc: row.descricao });
       });
       setDestaquesDb(agrupado);
+    } catch (err) {
+      console.error('Erro ao carregar destaques:', err);
     }
   };
 
+  const importarDestaquesIniciais = async () => {
+    for (const [secId, sec] of Object.entries(secretariasData)) {
+      const lista = (sec as any).destaques;
+      for (let i = 0; i < lista.length; i++) {
+        await addDoc(collection(db, 'destaques'), { secretaria_id: secId, titulo: lista[i].titulo, descricao: lista[i].desc, ordem: i });
+      }
+    }
+    alert('Importação concluída!');
+    carregarDestaques();
+  };
+  (window as any).importarDestaquesIniciais = importarDestaquesIniciais;
+
   useEffect(() => { carregarDestaques(); }, []);
 
-  const excluirDestaque = async (destaqueId: string) => {
+    const excluirDestaque = async (destaqueId: string) => {
     if (!confirm('Excluir este destaque?')) return;
-    await supabase.from('destaques').delete().eq('id', destaqueId);
+    await deleteDoc(doc(db, 'destaques', destaqueId));
     carregarDestaques();
   };
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -353,8 +369,8 @@ export default function Gestao360() {
   const itemAtivo = secretariasMenu.find(i => i.id === activeTab);
   const navigateTo = (id: string) => { setActiveTab(id); setSidebarOpen(false); };
 
-  const fazerLogout = async () => {
-    await supabase.auth.signOut();
+    const fazerLogout = async () => {
+    await signOut(auth);
     setModoAdmin(false);
   };
 
