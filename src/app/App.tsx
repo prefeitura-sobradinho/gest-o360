@@ -314,6 +314,64 @@ function DestaqueModal({ secretariaId, destaque, onClose, onSaved }: { secretari
 }
 
 /* ── APP ── */
+/* ── MODAL DE KPI (editar) ── */
+function KpiModal({ secretariaId, kpi, onClose, onSaved }: { secretariaId: string; kpi: any; onClose: () => void; onSaved: () => void }) {
+  const [label, setLabel] = useState(kpi.label || '');
+  const [valor, setValor] = useState(kpi.valor || '');
+  const [delta, setDelta] = useState(kpi.delta || '');
+  const [trend, setTrend] = useState(kpi.trend || 'neutral');
+  const [loading, setLoading] = useState(false);
+
+  const salvar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!label.trim() || !valor.trim()) return;
+    setLoading(true);
+    await updateDoc(doc(db, 'kpis', kpi.id), { label, valor, delta, trend });
+    setLoading(false);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-emblem"><Edit3 size={18} /></div>
+          <div>
+            <h2 className="modal-title">Editar Indicador</h2>
+            <p className="modal-sub">Gestão360 · Prefeitura de Sobradinho-BA</p>
+          </div>
+          <button onClick={onClose} className="modal-close"><X size={17} /></button>
+        </div>
+        <form onSubmit={salvar} className="modal-form">
+          <div>
+            <label className="modal-label">Nome do indicador</label>
+            <input type="text" value={label} onChange={e => setLabel(e.target.value)} className="modal-input" autoFocus />
+          </div>
+          <div>
+            <label className="modal-label">Valor</label>
+            <input type="text" value={valor} onChange={e => setValor(e.target.value)} className="modal-input" />
+          </div>
+          <div>
+            <label className="modal-label">Texto complementar (ex: +8 vs 2025)</label>
+            <input type="text" value={delta} onChange={e => setDelta(e.target.value)} className="modal-input" />
+          </div>
+          <div>
+            <label className="modal-label">Tendência</label>
+            <select value={trend} onChange={e => setTrend(e.target.value)} className="modal-input">
+              <option value="up">Alta (verde)</option>
+              <option value="down">Baixa (vermelho)</option>
+              <option value="neutral">Neutra (cinza)</option>
+            </select>
+          </div>
+          <button type="submit" disabled={!label.trim() || !valor.trim() || loading} className="modal-btn-submit">
+            {loading ? <span className="modal-spinner" /> : 'Salvar'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 export default function Gestao360() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [modoAdmin, setModoAdmin] = useState(false);
@@ -360,6 +418,39 @@ export default function Gestao360() {
     await deleteDoc(doc(db, 'destaques', destaqueId));
     carregarDestaques();
   };
+  
+  /* ── KPIS (Firebase) ── */
+  const [kpisDb, setKpisDb] = useState<Record<string, any[]>>({});
+  const [editandoKpi, setEditandoKpi] = useState<{ secretariaId: string; kpi: any } | null>(null);
+
+  const carregarKpis = async () => {
+    try {
+      const snap = await getDocs(query(collection(db, 'kpis'), orderBy('ordem', 'asc')));
+      const agrupado: Record<string, any[]> = {};
+      snap.forEach((docSnap) => {
+        const row: any = docSnap.data();
+        if (!agrupado[row.secretaria_id]) agrupado[row.secretaria_id] = [];
+        agrupado[row.secretaria_id].push({ id: docSnap.id, label: row.label, valor: row.valor, trend: row.trend, delta: row.delta });
+      });
+      setKpisDb(agrupado);
+    } catch (err) {
+      console.error('Erro ao carregar kpis:', err);
+    }
+  };
+
+  useEffect(() => { carregarKpis(); }, []);
+
+  const importarKpisIniciais = async () => {
+    for (const [secId, sec] of Object.entries(secretariasData)) {
+      const lista = (sec as any).kpis;
+      for (let i = 0; i < lista.length; i++) {
+        await addDoc(collection(db, 'kpis'), { secretaria_id: secId, label: lista[i].label, valor: lista[i].valor, trend: lista[i].trend, delta: lista[i].delta, ordem: i });
+      }
+    }
+    alert('Importação de KPIs concluída!');
+    carregarKpis();
+  };
+  (window as any).importarKpisIniciais = importarKpisIniciais;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [busca, setBusca] = useState('');
   const [showLogin, setShowLogin] = useState(false);
@@ -617,9 +708,12 @@ export default function Gestao360() {
             <div className="mt-3 barra-trilho h-2"><div className={`barra-fill tom-${s.tom} h-2 transition-all`} style={{ width:`${s.execucao}%` }} /></div>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {s.kpis.map((k: any, i: number) => (
-            <div key={`kpi-${i}`} className={`kpi-mini tom-${s.tom}`}>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {(kpisDb[id]?.length ? kpisDb[id] : s.kpis).map((k: any, i: number) => (
+            <div key={k.id || `kpi-${i}`} className={`kpi-mini tom-${s.tom} relative`}>
+              {modoAdmin && k.id && (
+                <button onClick={() => setEditandoKpi({ secretariaId: id, kpi: k })} className="absolute top-2 right-2 text-orange hover:text-ink"><Edit3 size={12} /></button>
+              )}
               <p className="kpi-mini-label">{k.label}</p>
               <p className="kpi-mini-valor">{k.valor}</p>
               {k.delta && <p className={`text-[10px] font-mono-data mt-1 flex items-center gap-0.5 ${k.trend==='up'?'text-verde':k.trend==='down'?'text-alerta':'text-stone'}`}>{k.trend==='up'&&<ArrowUpRight size={11}/>}{k.trend==='down'&&<ArrowDownRight size={11}/>}{k.delta}</p>}
@@ -683,6 +777,14 @@ export default function Gestao360() {
           destaque={editandoDestaque.destaque}
           onClose={() => setEditandoDestaque(null)}
           onSaved={carregarDestaques}
+        />
+      )}
+            {editandoKpi && (
+        <KpiModal
+          secretariaId={editandoKpi.secretariaId}
+          kpi={editandoKpi.kpi}
+          onClose={() => setEditandoKpi(null)}
+          onSaved={carregarKpis}
         />
       )}
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
