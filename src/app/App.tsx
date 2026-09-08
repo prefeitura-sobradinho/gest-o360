@@ -372,6 +372,59 @@ function KpiModal({ secretariaId, kpi, onClose, onSaved }: { secretariaId: strin
     </div>
   );
 }
+/* ── MODAL DE PORTFÓLIO (novo / editar) ── */
+function PortfolioModal({ item, onClose, onSaved }: { item: any | null; onClose: () => void; onSaved: () => void }) {
+  const [data, setData] = useState(item?.data || '');
+  const [titulo, setTitulo] = useState(item?.titulo || '');
+  const [desc, setDesc] = useState(item?.desc || '');
+  const [loading, setLoading] = useState(false);
+
+  const salvar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!data.trim() || !titulo.trim() || !desc.trim()) return;
+    setLoading(true);
+    if (item?.id) {
+      await updateDoc(doc(db, 'portfolio', item.id), { data, titulo, desc });
+    } else {
+      await addDoc(collection(db, 'portfolio'), { data, titulo, desc, icone: 'Award', tom: 'gold', ordem: -Date.now() });
+    }
+    setLoading(false);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-emblem"><Award size={18} /></div>
+          <div>
+            <h2 className="modal-title">{item ? 'Editar Entrega' : 'Nova Entrega'}</h2>
+            <p className="modal-sub">Gestão360 · Prefeitura de Sobradinho-BA</p>
+          </div>
+          <button onClick={onClose} className="modal-close"><X size={17} /></button>
+        </div>
+        <form onSubmit={salvar} className="modal-form">
+          <div>
+            <label className="modal-label">Período (ex: Março 2026)</label>
+            <input type="text" value={data} onChange={e => setData(e.target.value)} className="modal-input" autoFocus />
+          </div>
+          <div>
+            <label className="modal-label">Título</label>
+            <input type="text" value={titulo} onChange={e => setTitulo(e.target.value)} className="modal-input" />
+          </div>
+          <div>
+            <label className="modal-label">Descrição</label>
+            <textarea value={desc} onChange={e => setDesc(e.target.value)} className="modal-input" rows={4} />
+          </div>
+          <button type="submit" disabled={!data.trim() || !titulo.trim() || !desc.trim() || loading} className="modal-btn-submit">
+            {loading ? <span className="modal-spinner" /> : 'Salvar'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 export default function Gestao360() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [modoAdmin, setModoAdmin] = useState(false);
@@ -451,6 +504,44 @@ export default function Gestao360() {
     carregarKpis();
   };
   (window as any).importarKpisIniciais = importarKpisIniciais;
+  
+  /* ── PORTFÓLIO (Firebase) ── */
+  const iconesPortfolio: Record<string, any> = { FileText, Music, Leaf, Users, Trophy, CheckCircle, Briefcase, Award };
+  const [portfolioDb, setPortfolioDb] = useState<any[]>([]);
+  const [editandoPortfolio, setEditandoPortfolio] = useState<any | null>(null);
+
+  const carregarPortfolio = async () => {
+    try {
+      const snap = await getDocs(query(collection(db, 'portfolio'), orderBy('ordem', 'asc')));
+      const lista: any[] = [];
+      snap.forEach((docSnap) => {
+        const row: any = docSnap.data();
+        lista.push({ id: docSnap.id, data: row.data, titulo: row.titulo, desc: row.desc, icone: row.icone, tom: row.tom });
+      });
+      setPortfolioDb(lista);
+    } catch (err) {
+      console.error('Erro ao carregar portfolio:', err);
+    }
+  };
+
+  useEffect(() => { carregarPortfolio(); }, []);
+
+  const importarPortfolioInicial = async () => {
+    for (let i = 0; i < linhaDoTempo.length; i++) {
+      const item = linhaDoTempo[i];
+      const iconeNome = Object.keys(iconesPortfolio).find(k => iconesPortfolio[k] === item.icone) || 'Award';
+      await addDoc(collection(db, 'portfolio'), { data: item.data, titulo: item.titulo, desc: item.desc, icone: iconeNome, tom: item.tom, ordem: i });
+    }
+    alert('Importação do Portfólio concluída!');
+    carregarPortfolio();
+  };
+  (window as any).importarPortfolioInicial = importarPortfolioInicial;
+
+  const excluirPortfolio = async (itemId: string) => {
+    if (!confirm('Excluir esta entrega?')) return;
+    await deleteDoc(doc(db, 'portfolio', itemId));
+    carregarPortfolio();
+  };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [busca, setBusca] = useState('');
   const [showLogin, setShowLogin] = useState(false);
@@ -687,6 +778,43 @@ export default function Gestao360() {
       </div>
     </div>
   );
+    const renderPortfolio = () => {
+    const lista = portfolioDb.length ? portfolioDb : linhaDoTempo.map(i => ({ ...i, icone: 'FileText' }));
+    return (
+    <div className="space-y-5 max-w-3xl">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+          <h2 className="page-title"><Award className="mr-3 text-orange" size={22} /> Portfólio de Realizações</h2>
+          <p className="text-sm text-muted mt-1">Histórico consolidado de entregas — Gestão Cleivynho Sampaio</p>
+        </div>
+        {modoAdmin && <button onClick={() => setEditandoPortfolio('novo')} className="btn-gold-solid"><PlusCircle size={14} className="mr-2" /> Registrar Entrega</button>}
+      </div>
+      <div className="relative border-l-2 border-slate-200 ml-5 space-y-6 pb-10">
+        {lista.map((item: any) => {
+          const IconeItem = iconesPortfolio[item.icone] || Award;
+          return (
+          <div key={item.id} className="relative pl-9">
+            <div className={`timeline-dot tom-${item.tom}`}><IconeItem size={13} /></div>
+            <div className="card-flat">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-2">
+                <h3 className="text-base font-bold text-ink font-display leading-snug">{item.titulo}</h3>
+                <span className="tag-data shrink-0"><Clock size={11} className="mr-1" /> {item.data}</span>
+              </div>
+              <p className="text-sm text-muted leading-relaxed">{item.desc}</p>
+              {modoAdmin && item.id && (
+                <div className="mt-3 pt-2 border-t border-slate-100 flex justify-end gap-3">
+                  <button onClick={() => setEditandoPortfolio(item)} className="text-xs font-bold text-orange hover:text-ink flex items-center gap-1 transition-colors"><Edit3 size={11} /> Editar</button>
+                  <button onClick={() => excluirPortfolio(item.id)} className="text-xs font-bold text-alerta hover:text-ink flex items-center gap-1 transition-colors">Excluir</button>
+                </div>
+              )}
+            </div>
+          </div>
+          );
+        })}
+      </div>
+    </div>
+    );
+  };
 
   /* ── SECRETARIA ── */
   const renderSecretaria = (id: string) => {
@@ -785,6 +913,13 @@ export default function Gestao360() {
           kpi={editandoKpi.kpi}
           onClose={() => setEditandoKpi(null)}
           onSaved={carregarKpis}
+        />
+      )}
+            {editandoPortfolio !== undefined && editandoPortfolio !== null && (
+        <PortfolioModal
+          item={editandoPortfolio === 'novo' ? null : editandoPortfolio}
+          onClose={() => setEditandoPortfolio(null)}
+          onSaved={carregarPortfolio}
         />
       )}
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
