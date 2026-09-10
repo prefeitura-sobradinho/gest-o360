@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 /* ── DADOS ── */
-const municipio = { populacao:'31.800 hab.', area:'12.402 km²', pib:'R$ 380 Mi', idh:'0,614', altitude:'520 m', fundacao:'1962' };
+const municipio = { populacao:'27.097 hab.', area:'12.402 km²', pib:'R$ 843,2 Mi', idh:'0,631', altitude:'520 m', fundacao:'1962' };
 const kpisGerais = { orcamentoPPA:'672,5 Mi', moradiasMCMV:90, investimentoEducacao:'7,1 Mi+', impactoEconomico:'10 Mi+', empregosGerados:'232' };
 const statusAcoes = { concluidas:142, emExecucao:38, atrasadas:4, total:184 };
 
