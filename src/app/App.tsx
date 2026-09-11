@@ -11,6 +11,7 @@ import {
   Search, Bell, Menu, X, Target, Building2, Shield,
   ArrowUpRight, ArrowDownRight, Globe, Download, Eye, EyeOff, LogOut
 } from 'lucide-react';
+import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
 /* ── DADOS ── */
 const municipio = { populacao:'27.097 hab.', area:'12.402 km²', pib:'R$ 843,2 Mi', idh:'0,631', altitude:'520 m', fundacao:'1962' };
@@ -314,19 +315,38 @@ function DestaqueModal({ secretariaId, destaque, onClose, onSaved }: { secretari
 }
 
 /* ── APP ── */
-/* ── MODAL DE KPI (editar) ── */
+/* ── MODAL DE KPI (com histórico) ── */
 function KpiModal({ secretariaId, kpi, onClose, onSaved }: { secretariaId: string; kpi: any; onClose: () => void; onSaved: () => void }) {
   const [label, setLabel] = useState(kpi.label || '');
-  const [valor, setValor] = useState(kpi.valor || '');
-  const [delta, setDelta] = useState(kpi.delta || '');
-  const [trend, setTrend] = useState(kpi.trend || 'neutral');
+  const [unidade, setUnidade] = useState(kpi.unidade ?? '');
+  const [historico, setHistorico] = useState<{ periodo: string; valor: number }[]>(
+    kpi.historico && kpi.historico.length
+      ? kpi.historico
+      : [{ periodo: '', valor: Number(String(kpi.valor || '').replace(/[^\d,.-]/g, '').replace(',', '.')) || 0 }]
+  );
   const [loading, setLoading] = useState(false);
+
+  const atualizarPonto = (i: number, campo: 'periodo' | 'valor', v: string) => {
+    setHistorico(prev => prev.map((p, idx) => idx === i ? { ...p, [campo]: campo === 'valor' ? Number(v) || 0 : v } : p));
+  };
+  const adicionarPonto = () => setHistorico(prev => [...prev, { periodo: '', valor: 0 }]);
+  const removerPonto = (i: number) => setHistorico(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev);
 
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!label.trim() || !valor.trim()) return;
+    if (!label.trim() || historico.some(p => !p.periodo.trim())) return;
     setLoading(true);
-    await updateDoc(doc(db, 'kpis', kpi.id), { label, valor, delta, trend });
+    const ultimo = historico[historico.length - 1];
+    const penultimo = historico.length > 1 ? historico[historico.length - 2] : null;
+    let trend = 'neutral', delta = '';
+    if (penultimo) {
+      const diff = ultimo.valor - penultimo.valor;
+      trend = diff > 0 ? 'up' : diff < 0 ? 'down' : 'neutral';
+      const pct = penultimo.valor !== 0 ? ((diff / Math.abs(penultimo.valor)) * 100).toFixed(1) : null;
+      delta = pct !== null ? `${diff > 0 ? '+' : ''}${pct}% vs ${penultimo.periodo}` : `${diff > 0 ? '+' : ''}${diff} vs ${penultimo.periodo}`;
+    }
+    const valorFormatado = unidade === 'R$' ? `R$ ${ultimo.valor.toLocaleString('pt-BR')}` : unidade === '%' ? `${ultimo.valor}%` : unidade ? `${ultimo.valor} ${unidade}` : `${ultimo.valor}`;
+    await updateDoc(doc(db, 'kpis', kpi.id), { label, unidade, historico, valor: valorFormatado, trend, delta });
     setLoading(false);
     onSaved();
     onClose();
@@ -349,22 +369,41 @@ function KpiModal({ secretariaId, kpi, onClose, onSaved }: { secretariaId: strin
             <input type="text" value={label} onChange={e => setLabel(e.target.value)} className="modal-input" autoFocus />
           </div>
           <div>
-            <label className="modal-label">Valor</label>
-            <input type="text" value={valor} onChange={e => setValor(e.target.value)} className="modal-input" />
-          </div>
-          <div>
-            <label className="modal-label">Texto complementar (ex: +8 vs 2025)</label>
-            <input type="text" value={delta} onChange={e => setDelta(e.target.value)} className="modal-input" />
-          </div>
-          <div>
-            <label className="modal-label">Tendência</label>
-            <select value={trend} onChange={e => setTrend(e.target.value)} className="modal-input">
-              <option value="up">Alta (verde)</option>
-              <option value="down">Baixa (vermelho)</option>
-              <option value="neutral">Neutra (cinza)</option>
+            <label className="modal-label">Unidade</label>
+            <select value={unidade} onChange={e => setUnidade(e.target.value)} className="modal-input">
+              <option value="">Sem unidade (número simples)</option>
+              <option value="R$">R$ (Reais)</option>
+              <option value="%">% (Percentual)</option>
+              <option value="t">t (Toneladas)</option>
+              <option value="un">un (Unidades)</option>
+              <option value="hab">hab (Habitantes)</option>
+              <option value="vagas">vagas</option>
+              <option value="famílias">famílias</option>
             </select>
           </div>
-          <button type="submit" disabled={!label.trim() || !valor.trim() || loading} className="modal-btn-submit">
+          <div>
+            <label className="modal-label">Histórico (do mais antigo para o mais recente)</label>
+            <div className="space-y-2">
+              {historico.map((p, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input type="text" placeholder="Período (ex: Jan/2026)" value={p.periodo} onChange={e => atualizarPonto(i, 'periodo', e.target.value)} className="modal-input" style={{ flex: 2 }} />
+                  <input type="number" placeholder="Valor" value={p.valor} onChange={e => atualizarPonto(i, 'valor', e.target.value)} className="modal-input" style={{ flex: 1 }} />
+                  <button type="button" onClick={() => removerPonto(i)} className="text-alerta hover:text-ink px-1"><X size={15} /></button>
+                </div>
+              ))}
+            </div>
+            <button type="button" onClick={adicionarPonto} className="text-xs font-bold text-orange hover:text-ink flex items-center gap-1 mt-2"><PlusCircle size={13} /> Adicionar ponto</button>
+          </div>
+          {historico.length >= 2 && (
+            <div style={{ height: 90 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={historico}>
+                  <Line type="monotone" dataKey="valor" stroke="#EA580C" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          <button type="submit" disabled={!label.trim() || historico.some(p => !p.periodo.trim()) || loading} className="modal-btn-submit">
             {loading ? <span className="modal-spinner" /> : 'Salvar'}
           </button>
         </form>
@@ -836,7 +875,7 @@ export default function Gestao360() {
             <div className="mt-3 barra-trilho h-2"><div className={`barra-fill tom-${s.tom} h-2 transition-all`} style={{ width:`${s.execucao}%` }} /></div>
           </div>
         </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {(kpisDb[id]?.length ? kpisDb[id] : s.kpis).map((k: any, i: number) => (
             <div key={k.id || `kpi-${i}`} className={`kpi-mini tom-${s.tom} relative`}>
               {modoAdmin && k.id && (
@@ -845,6 +884,15 @@ export default function Gestao360() {
               <p className="kpi-mini-label">{k.label}</p>
               <p className="kpi-mini-valor">{k.valor}</p>
               {k.delta && <p className={`text-[10px] font-mono-data mt-1 flex items-center gap-0.5 ${k.trend==='up'?'text-verde':k.trend==='down'?'text-alerta':'text-stone'}`}>{k.trend==='up'&&<ArrowUpRight size={11}/>}{k.trend==='down'&&<ArrowDownRight size={11}/>}{k.delta}</p>}
+              {k.historico?.length >= 2 && (
+                <div style={{ height: 26, marginTop: 6 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={k.historico}>
+                      <Line type="monotone" dataKey="valor" stroke="currentColor" strokeWidth={1.5} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
           ))}
         </div>
