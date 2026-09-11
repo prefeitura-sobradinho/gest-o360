@@ -790,33 +790,7 @@ export default function Gestao360() {
     </div>
   );
 
-  /* ── PORTFÓLIO ── */
-  const renderPortfolio = () => (
-    <div className="space-y-5 max-w-3xl">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div>
-          <h2 className="page-title"><Award className="mr-3 text-orange" size={22} /> Portfólio de Realizações</h2>
-          <p className="text-sm text-muted mt-1">Histórico consolidado de entregas — Gestão Cleivynho Sampaio</p>
-        </div>
-        {modoAdmin && <button onClick={() => handleSimulateEdit('Nova Entrega')} className="btn-gold-solid"><PlusCircle size={14} className="mr-2" /> Registrar Entrega</button>}
-      </div>
-      <div className="relative border-l-2 border-slate-200 ml-5 space-y-6 pb-10">
-        {linhaDoTempo.map((item) => (
-          <div key={item.id} className="relative pl-9">
-            <div className={`timeline-dot tom-${item.tom}`}><item.icone size={13} /></div>
-            <div className="card-flat">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-2">
-                <h3 className="text-base font-bold text-ink font-display leading-snug">{item.titulo}</h3>
-                <span className="tag-data shrink-0"><Clock size={11} className="mr-1" /> {item.data}</span>
-              </div>
-              <p className="text-sm text-muted leading-relaxed">{item.desc}</p>
-              {modoAdmin && <div className="mt-3 pt-2 border-t border-slate-100 flex justify-end"><button onClick={() => handleSimulateEdit(`Editar: ${item.titulo}`)} className="text-xs font-bold text-orange hover:text-ink flex items-center gap-1 transition-colors"><Edit3 size={11} /> Editar</button></div>}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  
     const renderPortfolio = () => {
     const lista = portfolioDb.length ? portfolioDb : linhaDoTempo.map(i => ({ ...i, icone: 'FileText' }));
     return (
