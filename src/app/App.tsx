@@ -316,13 +316,13 @@ function DestaqueModal({ secretariaId, destaque, onClose, onSaved }: { secretari
 
 /* ── APP ── */
 /* ── MODAL DE KPI (com histórico) ── */
-function KpiModal({ secretariaId, kpi, onClose, onSaved }: { secretariaId: string; kpi: any; onClose: () => void; onSaved: () => void }) {
-  const [label, setLabel] = useState(kpi.label || '');
-  const [unidade, setUnidade] = useState(kpi.unidade ?? '');
+function KpiModal({ secretariaId, kpi, onClose, onSaved }: { secretariaId: string; kpi: any | null; onClose: () => void; onSaved: () => void }) {
+  const [label, setLabel] = useState(kpi?.label || '');
+  const [unidade, setUnidade] = useState(kpi?.unidade ?? '');
   const [historico, setHistorico] = useState<{ periodo: string; valor: number }[]>(
-    kpi.historico && kpi.historico.length
+    kpi?.historico && kpi.historico.length
       ? kpi.historico
-      : [{ periodo: '', valor: Number(String(kpi.valor || '').replace(/[^\d,.-]/g, '').replace(',', '.')) || 0 }]
+      : [{ periodo: '', valor: Number(String(kpi?.valor || '').replace(/[^\d,.-]/g, '').replace(',', '.')) || 0 }]
   );
   const [loading, setLoading] = useState(false);
 
@@ -346,7 +346,11 @@ function KpiModal({ secretariaId, kpi, onClose, onSaved }: { secretariaId: strin
       delta = pct !== null ? `${diff > 0 ? '+' : ''}${pct}% vs ${penultimo.periodo}` : `${diff > 0 ? '+' : ''}${diff} vs ${penultimo.periodo}`;
     }
     const valorFormatado = unidade === 'R$' ? `R$ ${ultimo.valor.toLocaleString('pt-BR')}` : unidade === '%' ? `${ultimo.valor}%` : unidade ? `${ultimo.valor} ${unidade}` : `${ultimo.valor}`;
-    await updateDoc(doc(db, 'kpis', kpi.id), { label, unidade, historico, valor: valorFormatado, trend, delta });
+    if (kpi?.id) {
+      await updateDoc(doc(db, 'kpis', kpi.id), { label, unidade, historico, valor: valorFormatado, trend, delta });
+    } else {
+      await addDoc(collection(db, 'kpis'), { secretaria_id: secretariaId, label, unidade, historico, valor: valorFormatado, trend, delta, ordem: 99 });
+    }
     setLoading(false);
     onSaved();
     onClose();
@@ -358,7 +362,7 @@ function KpiModal({ secretariaId, kpi, onClose, onSaved }: { secretariaId: strin
         <div className="modal-header">
           <div className="modal-emblem"><Edit3 size={18} /></div>
           <div>
-            <h2 className="modal-title">Editar Indicador</h2>
+                        <h2 className="modal-title">{kpi ? 'Editar Indicador' : 'Novo Indicador'}</h2>
             <p className="modal-sub">Gestão360 · Prefeitura de Sobradinho-BA</p>
           </div>
           <button onClick={onClose} className="modal-close"><X size={17} /></button>
@@ -509,6 +513,12 @@ export default function Gestao360() {
     if (!confirm('Excluir este destaque?')) return;
     await deleteDoc(doc(db, 'destaques', destaqueId));
     carregarDestaques();
+  };
+  
+  const excluirKpi = async (kpiId: string) => {
+    if (!confirm('Excluir este indicador?')) return;
+    await deleteDoc(doc(db, 'kpis', kpiId));
+    carregarKpis();
   };
   
   /* ── KPIS (Firebase) ── */
@@ -849,11 +859,14 @@ export default function Gestao360() {
             <div className="mt-3 barra-trilho h-2"><div className={`barra-fill tom-${s.tom} h-2 transition-all`} style={{ width:`${s.execucao}%` }} /></div>
           </div>
         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {(kpisDb[id]?.length ? kpisDb[id] : s.kpis).map((k: any, i: number) => (
             <div key={k.id || `kpi-${i}`} className={`kpi-mini tom-${s.tom} relative`}>
               {modoAdmin && k.id && (
-                <button onClick={() => setEditandoKpi({ secretariaId: id, kpi: k })} className="absolute top-2 right-2 text-orange hover:text-ink"><Edit3 size={12} /></button>
+                <div className="absolute top-2 right-2 flex gap-2">
+                  <button onClick={() => setEditandoKpi({ secretariaId: id, kpi: k })} className="text-orange hover:text-ink"><Edit3 size={12} /></button>
+                  <button onClick={() => excluirKpi(k.id)} className="text-alerta hover:text-ink"><X size={12} /></button>
+                </div>
               )}
               <p className="kpi-mini-label">{k.label}</p>
               <p className="kpi-mini-valor">{k.valor}</p>
@@ -869,6 +882,11 @@ export default function Gestao360() {
               )}
             </div>
           ))}
+          {modoAdmin && (
+            <button onClick={() => setEditandoKpi({ secretariaId: id, kpi: null })} className={`kpi-mini tom-${s.tom} flex items-center justify-center border-dashed border-2 text-sm font-bold gap-1.5 opacity-70 hover:opacity-100 transition-opacity`}>
+              <PlusCircle size={15} /> Novo Indicador
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 panel">
