@@ -1,29 +1,39 @@
 import { Link } from 'react-router';
-import { Activity, AlertCircle, Building2, Calculator, CheckCircle, ChevronRight, Clock, Download, TrendingUp, Landmark, User, Users } from 'lucide-react';
+import { Activity, AlertCircle, Building2, Calculator, CheckCircle, ChevronRight, Clock, Download, TrendingUp, User, Wallet, FileSignature } from 'lucide-react';
 import { KpiCard, Termometro, Fonte, AvisoExemplo, Carregando, Erro, BarraProgresso } from '@/components/ui-custom';
-import { BarChartCSS } from '@/components/charts/BarChartCSS';
 import { DonutChart } from '@/components/charts/DonutChart';
+import { BarrasHorizontais } from '@/components/charts/BarrasHorizontais';
 import { municipio, gestao, ppa, fmtMi } from '@/data/municipio';
-import { programas, programasDoEixo, recursoDoEixo, recursoTotal } from '@/data/programas';
+import { programas, programasDoEixo, recursoDoEixo } from '@/data/programas';
 import { eixosPPA } from '@/data/eixos';
 import { secretarias } from '@/data/secretarias';
-import { useMetas, useExecucao } from '@/hooks';
+import { useMetas, useExecucao, useReceitas, useCollection } from '@/hooks';
+import type { Convenio } from '@/types';
 import { progresso, progressoEsperado, emRisco, fmtData } from '@/lib/metas';
 
 export function Dashboard() {
   const { metas, resumo, carregando, erro, exemplo, ultimaAtualizacao } = useMetas();
   const { totais: financeiro, vazio: semFinanceiro } = useExecucao();
+  const receitas = useReceitas();
+  const { data: convenios } = useCollection<Convenio>('convenios');
   const esperadoGlobal = metas.length ? Math.round(metas.reduce((a, m) => a + progressoEsperado(m), 0) / metas.length) : 0;
   const recentes = [...metas].sort((a, b) => b.atualizadoEm.localeCompare(a.atualizadoEm)).slice(0, 5);
   const [nomeA, nomeB] = gestao.slogan.split('&').length === 2 ? gestao.slogan.split('&') : [gestao.slogan, ''];
   const orcamentoPorEixo = eixosPPA.map(e => ({ nome: `${e.numero}. ${e.nome}`, valor: recursoDoEixo(e.id) / 1_000_000, cor: e.cor }));
-  const avancoProgramas = programas
-    .map(p => {
-      const ms = metas.filter(m => m.programaId === p.id);
-      return { nome: p.areaTematica, exec: ms.length ? Math.round(ms.reduce((a, m) => a + progresso(m), 0) / ms.length) : 0, n: ms.length };
-    })
-    .filter(p => p.n > 0)
-    .map(({ nome, exec }) => ({ nome, exec }));
+  const avancoProgramas = programas.map(p => {
+    const ms = metas.filter(m => m.programaId === p.id);
+    const pct = ms.length ? Math.round(ms.reduce((a, m) => a + progresso(m), 0) / ms.length) : 0;
+    return {
+      id: p.id, nome: p.nomeCurto, pct, semDados: ms.length === 0,
+      detalhe: ms.length ? `${ms.length} ${ms.length === 1 ? 'indicador' : 'indicadores'} · ${fmtMi(p.recurso)}` : `sem indicadores · ${fmtMi(p.recurso)}`,
+    };
+  }).sort((a, b) => Number(a.semDados) - Number(b.semDados) || b.pct - a.pct);
+  const pctFinanceiro = Math.round((financeiro.liquidado / ppa.orcamentoTotal) * 1000) / 10;
+  const anoReceita = [...receitas.porAno.keys()].sort().pop() ?? null;
+  const receitaAno = anoReceita ? receitas.porAno.get(anoReceita) ?? null : null;
+  const conveniosValidos = convenios.filter(c => c.situacao !== 'cancelado');
+  const captado = conveniosValidos.reduce((a, c) => a + c.valorCusteio + c.valorInvestimento, 0);
+  const totalConvenios = conveniosValidos.length;
   const criticas = metas.filter(m => emRisco(m)).sort((a, b) => (progresso(a) - progressoEsperado(a)) - (progresso(b) - progressoEsperado(b))).slice(0, 4);
 
   return (
@@ -85,10 +95,13 @@ export function Dashboard() {
 
       {/* KPI STRIP */}
       <div className="kpi-strip">
-        <KpiCard icon={Calculator} label="Orçamento PPA" valor={fmtMi(ppa.orcamentoTotal)} sub={ppa.periodo} acent="#EA580C" />
-        <KpiCard icon={TrendingUp} label="Investimento Educação" valor="R$ 7,1 Mi+" sub="+15% vs 2024" trend="up" acent="#1D7FB0" />
-        <KpiCard icon={Landmark} label="Impacto Econômico" valor="R$ 10 Mi+" sub="Forró do Vaqueiro" trend="up" acent="#7A2E3D" />
-        <KpiCard icon={Users} label="Novos Servidores" valor="232 vagas" sub="Concurso público" trend="up" acent="#5C7A4C" />
+        <KpiCard icon={Calculator} label="Orçamento do PPA" valor={fmtMi(ppa.orcamentoTotal)} sub={`quadriênio ${ppa.periodo}`} acent="#EA580C" />
+        <KpiCard icon={Wallet} label="Liquidado" valor={fmtMi(financeiro.liquidado)}
+          sub={financeiro.liquidado > 0 ? `${pctFinanceiro}% do previsto` : 'aguardando importação'} acent="#1D7FB0" />
+        <KpiCard icon={TrendingUp} label="Receita arrecadada" valor={receitaAno ? fmtMi(receitaAno.arrecadado) : '—'}
+          sub={receitaAno ? `${Math.round(receitaAno.arrecadado / receitaAno.previsto * 100)}% da previsão de ${anoReceita}` : 'aguardando importação'} acent="#5C7A4C" />
+        <KpiCard icon={FileSignature} label="Convênios captados" valor={captado > 0 ? fmtMi(captado) : '—'}
+          sub={captado > 0 ? `${totalConvenios} ${totalConvenios === 1 ? 'instrumento' : 'instrumentos'}` : 'nenhum cadastrado'} acent="#7A2E3D" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -142,13 +155,16 @@ export function Dashboard() {
           </div>
 
           <div className="panel">
-            <div className="mb-3">
-              <p className="panel-title">Avanço dos programas</p>
-              <p className="panel-sub">média dos indicadores de cada programa</p>
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="panel-title">Avanço por programa</h3>
+                <p className="panel-sub">média dos indicadores de cada programa do PPA</p>
+              </div>
+              <Link to="/ppa" className="btn-ghost-sm">Ver programas <ChevronRight size={13} className="ml-1" /></Link>
             </div>
-            <BarChartCSS data={avancoProgramas} />
-            <div className="flex gap-4 mt-2 flex-wrap">
-              {([['#5C7A4C', '≥ 70% — Em dia'], ['#1D7FB0', '50–69% — Atenção'], ['#EA580C', '< 50% — Requer atenção']] as [string, string][]).map(([cor, txt]) => (
+            <BarrasHorizontais dados={avancoProgramas} />
+            <div className="flex gap-4 mt-4 flex-wrap">
+              {([['var(--verde)', '≥ 70% — em dia'], ['var(--azul)', '50–69% — atenção'], ['var(--orange)', '< 50% — requer atenção']] as [string, string][]).map(([cor, txt]) => (
                 <div key={txt} className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: cor }} /><span className="text-[10px] font-mono-data text-stone">{txt}</span></div>
               ))}
             </div>
@@ -179,10 +195,15 @@ export function Dashboard() {
                 <div><h3 className="panel-title">Execução financeira</h3><p className="panel-sub">liquidado no PPA</p></div>
                 <Link to="/execucao" className="btn-ghost-sm">Ver <ChevronRight size={13} className="ml-1" /></Link>
               </div>
-              <p className="font-display text-2xl font-bold text-ink">{fmtMi(financeiro.liquidado)}</p>
-              <p className="text-[11px] font-mono-data text-stone mb-2">{Math.round(financeiro.liquidado / ppa.orcamentoTotal * 1000) / 10}% de {fmtMi(ppa.orcamentoTotal)}</p>
-              <BarraProgresso pct={Math.min(100, financeiro.liquidado / ppa.orcamentoTotal * 100)} esperado={esperadoGlobal} tom="orange" altura={8} />
-              <p className="text-[10px] font-mono-data text-stone mt-1.5">▲ marcador: avanço físico esperado hoje ({esperadoGlobal}%)</p>
+              <div className="flex items-baseline justify-between gap-2 mb-2">
+                <p className="font-display text-2xl font-bold text-ink">{fmtMi(financeiro.liquidado)}</p>
+                <p className="font-mono-data text-sm font-bold text-orange">{pctFinanceiro}%</p>
+              </div>
+              <BarraProgresso pct={Math.min(100, pctFinanceiro)} esperado={resumo.progressoMedio} tom="orange" altura={8} />
+              <p className="text-[11px] text-muted mt-2">
+                Avanço físico das metas: <strong className="text-ink">{resumo.progressoMedio}%</strong>
+                {resumo.progressoMedio > pctFinanceiro ? ' — entrega acima do gasto.' : resumo.progressoMedio < pctFinanceiro ? ' — gasto acima da entrega.' : ' — em equilíbrio.'}
+              </p>
               <Fonte fonte="Portal da Transparência de Sobradinho" className="mt-3" />
             </div>
           )}

@@ -113,6 +113,8 @@ export interface Eixo {
 export interface Programa {
   id: string;
   nome: string;
+  /** nome enxuto para gráficos e listas, onde o nome oficial não cabe */
+  nomeCurto: string;
   eixoId: string;
   areaTematica: string;
   objetivo: string;
@@ -140,7 +142,7 @@ export interface ItemMenu {
 
 /** Despesa agregada por ano, mês e ação orçamentária. Coleção `execucao`. */
 export interface ExecucaoAcao {
-  id: string;            // "2026-01-2018"
+  id: string;            // "2026-01-2018" (portal) ou "2026-01-m-acao-legislativa" (manual)
   ano: number;
   mes: number;
   cdAcao: number;
@@ -151,6 +153,15 @@ export interface ExecucaoAcao {
   empenhado: number;
   liquidado: number;
   pago: number;
+  /**
+   * De onde veio o lançamento. 'portal' é importado do Portal da Transparência;
+   * 'manual' é informado por unidade com contabilidade própria (Câmara, SAAE).
+   * Ausente equivale a 'portal', para os registros importados antes deste campo existir.
+   */
+  origem?: 'portal' | 'manual';
+  /** quem lançou, nos registros manuais */
+  lancadoPor?: string;
+  observacao?: string;
 }
 
 /** Receita do mês: previsão da LOA e arrecadação realizada. Coleção `receitas`. */

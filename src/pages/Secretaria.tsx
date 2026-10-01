@@ -8,11 +8,10 @@ import { AdminOnly, AvisoExemplo, BarraProgresso, Fonte, InfoRow, StatusBadge, V
 import { DestaqueModal, KpiModal, MetaModal, ProgressoModal } from '@/components/modals';
 import { secretarias } from '@/data/secretarias';
 import { programasDaSecretaria } from '@/data/programas';
-import { fmtMi } from '@/data/municipio';
 import { useCollection, useMetas, useExecucao } from '@/hooks';
 import { execucaoDaSecretaria } from '@/lib/execucao';
-import { valorTotal, SITUACAO_CONVENIO, TOM_CONVENIO } from '@/lib/convenios';
-import { fmtReais } from '@/data/municipio';
+import { valorTotal, SITUACAO_CONVENIO, TOM_CONVENIO, resumirConvenios, diasDeVigencia } from '@/lib/convenios';
+import { fmtReais, fmtMi } from '@/data/municipio';
 import { progresso, progressoEsperado, emRisco, resumir, fmtNum, fmtData } from '@/lib/metas';
 import type { Convenio, Destaque, Kpi, Meta } from '@/types';
 
@@ -35,6 +34,14 @@ export function Secretaria() {
   const progsSec = useMemo(() => programasDaSecretaria(id), [id]);
   const financeiro = useMemo(() => execucaoDaSecretaria(doPPA, id), [doPPA, id]);
   const convenios = useMemo(() => convCol.data.filter(c => c.secretariaId === id && c.situacao !== 'cancelado'), [convCol.data, id]);
+  /** A SECONV capta para todas as pastas, então o painel dela olha a carteira inteira. */
+  const ehSeconv = id === 'convenios';
+  const carteira = useMemo(() => (ehSeconv ? resumirConvenios(convCol.data) : null), [ehSeconv, convCol.data]);
+  const proximoVencimento = useMemo(() => {
+    if (!ehSeconv) return null;
+    const ativos = convCol.data.filter(c => c.situacao === 'aprovado' || c.situacao === 'em_execucao');
+    return ativos.sort((a, b) => a.vigenciaFim.localeCompare(b.vigenciaFim))[0] ?? null;
+  }, [ehSeconv, convCol.data]);
 
   if (!s) return <Vazio titulo="Secretaria não encontrada" acao={<Link to="/" className="btn-ghost-sm">Voltar ao início</Link>} />;
 
@@ -90,6 +97,59 @@ export function Secretaria() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
+          {carteira && carteira.total > 0 && (
+            <div className="panel">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="panel-title">Carteira de captação</h3>
+                  <p className="panel-sub">indicadores calculados a partir dos convênios cadastrados</p>
+                </div>
+                <Link to="/convenios" className="btn-ghost-sm">Gerenciar <ChevronRight size={13} className="ml-1" /></Link>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="municipio-stat">
+                  <p className="text-[10px] font-mono-data text-stone uppercase tracking-wider">Captado</p>
+                  <p className="text-base font-bold text-ink font-display mt-0.5">{fmtMi(carteira.valorTotal)}</p>
+                </div>
+                <div className="municipio-stat">
+                  <p className="text-[10px] font-mono-data text-stone uppercase tracking-wider">Recebido</p>
+                  <p className="text-base font-bold text-ink font-display mt-0.5">{fmtMi(carteira.recebido)}</p>
+                  <p className="text-[10px] font-mono-data text-stone">{carteira.valorTotal ? Math.round(carteira.recebido / carteira.valorTotal * 100) : 0}% do captado</p>
+                </div>
+                <div className="municipio-stat">
+                  <p className="text-[10px] font-mono-data text-stone uppercase tracking-wider">Instrumentos ativos</p>
+                  <p className="text-base font-bold text-ink font-display mt-0.5">{carteira.ativos}</p>
+                  <p className="text-[10px] font-mono-data text-stone">de {carteira.total} cadastrados</p>
+                </div>
+                <div className={`municipio-stat ${carteira.emRisco > 0 ? 'alerta' : ''}`}>
+                  <p className="text-[10px] font-mono-data text-stone uppercase tracking-wider">Vigência curta</p>
+                  <p className="text-base font-bold text-ink font-display mt-0.5">{carteira.emRisco}</p>
+                  <p className="text-[10px] font-mono-data text-stone">vencem em até 6 meses</p>
+                </div>
+              </div>
+              {proximoVencimento && (
+                <p className="text-xs text-muted mt-3">
+                  Próximo a vencer: <strong className="text-ink">{proximoVencimento.objeto.slice(0, 70)}{proximoVencimento.objeto.length > 70 ? '…' : ''}</strong> — {diasDeVigencia(proximoVencimento)} dias.
+                </p>
+              )}
+              <div className="mt-4 pt-3 border-t border-slate-100">
+                <p className="secao-label mb-2">Captação por origem</p>
+                <div className="space-y-2">
+                  {carteira.porParlamentar.map(pp => (
+                    <div key={pp.nome}>
+                      <div className="flex justify-between text-[11px] mb-1">
+                        <span className="text-ink font-medium">{pp.nome}</span>
+                        <span className="font-mono-data text-muted">{fmtReais(pp.valor)} · {pp.quantidade}</span>
+                      </div>
+                      <BarraProgresso pct={(pp.valor / carteira.valorTotal) * 100} tom="verde" altura={5} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <Fonte fonte="Transferegov e convênios cadastrados pela SECONV" className="mt-3" />
+            </div>
+          )}
+
           {convenios.length > 0 && (
             <div className="panel">
               <div className="flex justify-between items-center mb-3">

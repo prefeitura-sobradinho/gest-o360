@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Wallet, TrendingUp, ChevronRight, Download } from 'lucide-react';
-import { BarraProgresso, Carregando, Erro, Fonte, KpiCard, Vazio } from '@/components/ui-custom';
+import { Wallet, TrendingUp, Download, PlusCircle, Pencil } from 'lucide-react';
+import { AdminOnly, BarraProgresso, Carregando, Erro, Fonte, KpiCard, Vazio } from '@/components/ui-custom';
+import { ExecucaoManualModal } from '@/components/modals';
 import { programas } from '@/data/programas';
 import { eixosPPA } from '@/data/eixos';
 import { ppa, fmtMi, fmtReais } from '@/data/municipio';
@@ -15,6 +16,7 @@ export function Execucao() {
   const { doPPA, itens, totais, anos, carregando, erro, vazio } = useExecucao();
   const receitas = useReceitas();
   const [ano, setAno] = useState<number | 'todos'>('todos');
+  const [lancar, setLancar] = useState<string | null>(null);
 
   const filtrados = ano === 'todos' ? doPPA : doPPA.filter(i => i.ano === ano);
   const exec = (id: string) => execucaoDoPrograma(filtrados, id);
@@ -40,6 +42,7 @@ export function Execucao() {
 
   return (
     <div className="space-y-5 max-w-5xl">
+      {lancar !== null && <ExecucaoManualModal programaIdPadrao={lancar || undefined} onClose={() => setLancar(null)} />}
       {erro && <Erro mensagem={erro} />}
 
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -55,6 +58,7 @@ export function Execucao() {
             </select>
           )}
           {filtrados.length > 0 && <button onClick={exportarCSV} className="btn-ghost-sm"><Download size={12} className="mr-1" /> CSV</button>}
+          <AdminOnly><button onClick={() => setLancar('')} className="btn-gold-solid"><PlusCircle size={13} className="mr-1.5" /> Lançar execução</button></AdminOnly>
         </div>
       </div>
 
@@ -130,7 +134,12 @@ export function Execucao() {
                         const pct = percentualDoPPA(filtrados, p.id);
                         if (e.liquidado === 0 && p.notaExecucao) return (
                           <div key={p.id} className="nota-execucao">
-                            <strong>{p.nome}</strong> · {fmtMi(p.recurso)} previstos. {p.notaExecucao}
+                            <div>
+                              <strong>{p.nome}</strong> · {fmtMi(p.recurso)} previstos. {p.notaExecucao}
+                            </div>
+                            <AdminOnly>
+                              <button onClick={() => setLancar(p.id)} className="btn-ghost-sm shrink-0"><Pencil size={11} className="mr-1" /> Lançar</button>
+                            </AdminOnly>
                           </div>
                         );
                         return (
@@ -159,7 +168,11 @@ export function Execucao() {
               <tbody>
                 {[...filtrados].sort((a, b) => b.liquidado - a.liquidado).slice(0, 40).map(i => (
                   <tr key={i.id}>
-                    <td><span className="font-mono-data text-stone mr-2">{i.cdAcao}</span>{i.dsAcao}</td>
+                    <td>
+                      {i.origem === 'manual'
+                        ? <><span className="tag-manual">lançamento da unidade</span> {i.dsAcao}</>
+                        : <><span className="font-mono-data text-stone mr-2">{i.cdAcao}</span>{i.dsAcao}</>}
+                    </td>
                     <td className="text-muted">{programas.find(p => p.id === i.programaId)?.areaTematica ?? '—'}</td>
                     <td className="font-mono-data text-muted">{MESES[i.mes]}/{i.ano}</td>
                     <td className="font-mono-data text-right">{fmtReais(i.empenhado)}</td>
