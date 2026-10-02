@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { AuthContext, useProvideAuth } from '@/hooks';
 import { AppShell } from '@/components/layout/AppShell';
-import { Dashboard, PPA, Metas, MetaDetalhe, Portfolio, Secretaria, Admin, Execucao, Convenios } from '@/pages';
+import { Dashboard, PPA, Metas, MetaDetalhe, AcoesPPA, Portfolio, Secretaria, Admin, Execucao, Convenios } from '@/pages';
 
 export default function App() {
   const auth = useProvideAuth();
@@ -14,6 +14,7 @@ export default function App() {
             <Route path="ppa" element={<PPA />} />
             <Route path="ppa/metas" element={<Metas />} />
             <Route path="ppa/metas/:id" element={<MetaDetalhe />} />
+            <Route path="ppa/acoes" element={<AcoesPPA />} />
             <Route path="execucao" element={<Execucao />} />
             <Route path="convenios" element={<Convenios />} />
             <Route path="portfolio" element={<Portfolio />} />

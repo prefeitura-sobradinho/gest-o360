@@ -1,6 +1,7 @@
 export * from './Dashboard';
 export * from './PPA';
 export * from './Metas';
+export * from './AcoesPPA';
 export * from './MetaDetalhe';
 export * from './Execucao';
 export * from './Convenios';

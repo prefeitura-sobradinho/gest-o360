@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import type { StatusMeta, Tom, Trend } from '@/types';
 import { STATUS_LABEL, STATUS_TOM, fmtData } from '@/lib/metas';
 import { useAuth } from '@/hooks';
+import { odsInfo } from '@/data/ods';
 
 /* ── KPI grande (faixa do dashboard) ── */
 export function KpiCard({ icon: Icon, label, valor, sub, trend, acent = '#EA580C' }:
@@ -117,4 +118,23 @@ export function AvisoExemplo({ texto = 'Estes são dados de exemplo. A coleção
 export function AdminOnly({ children }: { children: ReactNode }) {
   const { isAdmin } = useAuth();
   return isAdmin ? <>{children}</> : null;
+}
+
+/* ── Selos de ODS (Agenda 2030 da ONU, citados no Anexo II do PPA) ── */
+export function SelosODS({ codigos }: { codigos: string[] }) {
+  if (!codigos.length) return null;
+  return (
+    <div className="ods-selos">
+      {codigos.map(c => {
+        const info = odsInfo(c);
+        if (!info) return null;
+        const n = c.replace(/\D/g, '');
+        return (
+          <span key={c} className="ods-selo" style={{ background: info.cor }} title={`${c} — ${info.nome}`}>
+            {n}
+          </span>
+        );
+      })}
+    </div>
+  );
 }

@@ -1,8 +1,9 @@
 import { Link } from 'react-router';
 import { Activity, AlertCircle, CheckCircle, Target, ChevronRight } from 'lucide-react';
-import { AvisoExemplo, BarraProgresso, Carregando, Fonte, StatusBadge } from '@/components/ui-custom';
+import { AvisoExemplo, BarraProgresso, Carregando, Fonte, SelosODS, StatusBadge } from '@/components/ui-custom';
 import { eixosPPA } from '@/data/eixos';
 import { programasDoEixo, recursoDoEixo, recursoTotal } from '@/data/programas';
+import { acoesPPADoPrograma } from '@/data/acoesPPA';
 import { ppa, fmtMi } from '@/data/municipio';
 import { useMetas } from '@/hooks';
 import { progresso, progressoEsperado, emRisco } from '@/lib/metas';
@@ -77,19 +78,27 @@ export function PPA() {
                           </div>
                           <div className="text-right shrink-0">
                             <p className="font-mono-data text-sm font-bold text-ink">{fmtMi(prog.recurso)}</p>
-                            <p className="font-mono-data text-[10px] text-stone">{ms.length} indicadores</p>
+                            <p className="font-mono-data text-[10px] text-stone">
+                              {ms.length} indicadores · {acoesPPADoPrograma(prog.id).length} ações
+                            </p>
                           </div>
                         </div>
+                        {prog.ods.length > 0 && <div className="mt-2"><SelosODS codigos={prog.ods} /></div>}
                         <div className="mt-2.5 flex items-center gap-3">
                           <div className="flex-1"><BarraProgresso pct={pctP} tom={pctP === 100 ? 'verde' : risco ? 'alerta' : eixo.tom} altura={6} /></div>
                           <span className="font-mono-data text-xs font-bold text-ink shrink-0">{pctP}%</span>
                           {risco > 0 && <StatusBadge status="atrasada" />}
                         </div>
-                        {ms.length > 0 && (
-                          <Link to={`/ppa/metas?programa=${prog.id}`} className="text-[11px] font-bold text-orange hover:text-ink inline-flex items-center gap-1 mt-2">
-                            Ver indicadores <ChevronRight size={11} />
+                        <div className="flex flex-wrap gap-4 mt-2">
+                          {ms.length > 0 && (
+                            <Link to={`/ppa/metas?programa=${prog.id}`} className="text-[11px] font-bold text-orange hover:text-ink inline-flex items-center gap-1">
+                              Ver indicadores <ChevronRight size={11} />
+                            </Link>
+                          )}
+                          <Link to="/ppa/acoes" className="text-[11px] font-bold text-orange hover:text-ink inline-flex items-center gap-1">
+                            Ver ações <ChevronRight size={11} />
                           </Link>
-                        )}
+                        </div>
                       </div>
                     );
                   })}

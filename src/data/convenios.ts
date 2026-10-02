@@ -3,7 +3,7 @@ import type { Convenio } from '@/types';
 /**
  * Planos de Ação de Transferências Especiais (emendas parlamentares) registrados
  * no Transferegov e destinados ao Município de Sobradinho (CNPJ 16.444.804/0001-10).
- * Carga inicial — novos convênios são cadastrados pela SECONV no próprio painel.
+ * Carga inicial — novos convênios são cadastrados pela SECON no próprio painel.
  */
 export const conveniosIniciais: Omit<Convenio, 'id'>[] = [
   {

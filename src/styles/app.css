@@ -298,3 +298,30 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .barra-h-linha{grid-template-columns:1fr 2.6rem;grid-template-areas:"nome valor" "trilho trilho";gap:.3rem .6rem;}
   .barra-h-nome{grid-area:nome;} .barra-h-valor{grid-area:valor;} .barra-h-trilho{grid-area:trilho;}
 }
+
+
+/* ── SELOS DE ODS ── */
+.ods-selos{display:flex;flex-wrap:wrap;gap:.25rem;}
+.ods-selo{width:1.35rem;height:1.35rem;border-radius:.3rem;color:#fff;font-family:'DM Mono',monospace;
+  font-size:.62rem;font-weight:500;display:inline-flex;align-items:center;justify-content:center;
+  cursor:default;flex-shrink:0;}
+
+/* ── AÇÕES DO PPA ── */
+.acao-linha{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;
+  padding:.6rem .75rem;border-radius:.55rem;border:1px solid rgba(30,58,138,.07);background:var(--paper-2);}
+.acao-linha.sem-exec{background:transparent;border-style:dashed;}
+.acao-nome{font-size:.79rem;color:var(--ink);line-height:1.35;font-weight:500;}
+.acao-meta{display:flex;flex-wrap:wrap;gap:.3rem;align-items:center;margin-top:.3rem;}
+.acao-valor{font-family:'DM Mono',monospace;font-size:.75rem;font-weight:700;color:var(--ink);
+  white-space:nowrap;font-variant-numeric:tabular-nums;text-align:right;}
+.acao-valor.vazio{color:var(--stone);font-weight:500;}
+.tag-regiao,.tag-produto,.tag-codigo,.tag-repetida{display:inline-block;font-family:'DM Mono',monospace;
+  font-size:.56rem;text-transform:uppercase;letter-spacing:.05em;padding:.1rem .38rem;border-radius:.3rem;}
+.tag-regiao{background:#E9F1F5;color:var(--azul);border:1px solid #CFE0E8;}
+.tag-produto{background:#F0EDE6;color:var(--stone);border:1px solid rgba(30,58,138,.1);}
+.tag-codigo{background:var(--orange-bg);color:var(--orange-dark);border:1px solid rgba(234,88,12,.2);}
+.tag-repetida{background:#FEF2F0;color:var(--alerta);border:1px solid #F5D0CB;}
+@media(max-width:560px){
+  .acao-linha{flex-direction:column;gap:.35rem;}
+  .acao-valor{text-align:left;}
+}

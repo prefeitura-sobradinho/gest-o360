@@ -69,13 +69,13 @@ export const programas: Programa[] = [
     notaExecucao: 'O SAAE é autarquia com contabilidade própria; suas despesas não constam no portal do Executivo.',
   },
   {
-    // O eixo VII é coordenado pela Secretaria Municipal de Convênios (SECONV), que executa a captação
-    // de recursos. No espelho do PPA (pág. 48) a unidade responsável foi impressa como SEPLAN; a SECONV
+    // O eixo VII é coordenado pela Secretaria Municipal de Convênios (SECON), que executa a captação
+    // de recursos. No espelho do PPA (pág. 48) a unidade responsável foi impressa como SEPLAN; a SECON
     // aparece no documento na ação "Manutenção da Secretaria Municipal de Convênios" (pág. 35).
     id: 'infra-urbanistica', nome: 'Infraestrutura e Gestão Urbanística', nomeCurto: 'Gestão Urbanística', eixoId: 'convenios', areaTematica: 'Infraestrutura e Gestão Urbanística',
     objetivo: 'Proporcionar o desenvolvimento da cidade por meio de obras estruturantes com a captação dos recursos estaduais, federais e emenda parlamentar.',
-    recurso: 46_276_000, unidadeResponsavel: 'Secretaria Municipal de Convênios (SECONV)', secretariaId: 'convenios', ods: ['ODS 11', 'ODS 16'], pagina: 48,
-    notaExecucao: 'As obras captadas por convênio são empenhadas nas ações das secretarias que as executam; a ação própria da SECONV (2070) está classificada no programa de Qualidade Administrativa.',
+    recurso: 46_276_000, unidadeResponsavel: 'Secretaria Municipal de Convênios (SECON)', secretariaId: 'convenios', ods: ['ODS 11', 'ODS 16'], pagina: 48,
+    notaExecucao: 'As obras captadas por convênio são empenhadas nas ações das secretarias que as executam; a ação própria da SECON (2070) está classificada no programa de Qualidade Administrativa.',
   },
 ];
 

@@ -109,6 +109,26 @@ export interface Eixo {
   icone: LucideIcon;
 }
 
+/** Regionalização declarada para a ação no Anexo II do PPA */
+export type RegiaoAcao = 'todo' | 'sede' | 'interior';
+
+/** Ação do PPA — o que cada programa se comprometeu a executar (Anexo II) */
+export interface AcaoPPA {
+  id: string;
+  nome: string;
+  programaId: string;
+  /** `null` quando a célula está em branco no espelho publicado */
+  regiao: RegiaoAcao | null;
+  /** página do Diário Oficial nº 4406 */
+  pagina: number;
+  /** produto declarado no espelho */
+  produto?: string;
+  /** ação orçamentária correspondente no Portal da Transparência */
+  codigo?: number;
+  /** a mesma ação aparece duas vezes no espelho */
+  repetida?: boolean;
+}
+
 /** Programa do PPA — nível entre o eixo e os indicadores (Art. 4º da Lei 712/2025) */
 export interface Programa {
   id: string;
@@ -191,7 +211,7 @@ export interface Convenio {
   objeto: string;
   valorCusteio: number;
   valorInvestimento: number;
-  /** já recebido/executado, alimentado manualmente pela SECONV */
+  /** já recebido/executado, alimentado manualmente pela SECON */
   valorRecebido?: number;
   vigenciaInicio: string;   // ISO
   vigenciaFim: string;      // ISO

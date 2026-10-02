@@ -34,14 +34,14 @@ export function Secretaria() {
   const progsSec = useMemo(() => programasDaSecretaria(id), [id]);
   const financeiro = useMemo(() => execucaoDaSecretaria(doPPA, id), [doPPA, id]);
   const convenios = useMemo(() => convCol.data.filter(c => c.secretariaId === id && c.situacao !== 'cancelado'), [convCol.data, id]);
-  /** A SECONV capta para todas as pastas, então o painel dela olha a carteira inteira. */
-  const ehSeconv = id === 'convenios';
-  const carteira = useMemo(() => (ehSeconv ? resumirConvenios(convCol.data) : null), [ehSeconv, convCol.data]);
+  /** A SECON capta para todas as pastas, então o painel dela olha a carteira inteira. */
+  const ehSecon = id === 'convenios';
+  const carteira = useMemo(() => (ehSecon ? resumirConvenios(convCol.data) : null), [ehSecon, convCol.data]);
   const proximoVencimento = useMemo(() => {
-    if (!ehSeconv) return null;
+    if (!ehSecon) return null;
     const ativos = convCol.data.filter(c => c.situacao === 'aprovado' || c.situacao === 'em_execucao');
     return ativos.sort((a, b) => a.vigenciaFim.localeCompare(b.vigenciaFim))[0] ?? null;
-  }, [ehSeconv, convCol.data]);
+  }, [ehSecon, convCol.data]);
 
   if (!s) return <Vazio titulo="Secretaria não encontrada" acao={<Link to="/" className="btn-ghost-sm">Voltar ao início</Link>} />;
 
@@ -146,7 +146,7 @@ export function Secretaria() {
                   ))}
                 </div>
               </div>
-              <Fonte fonte="Transferegov e convênios cadastrados pela SECONV" className="mt-3" />
+              <Fonte fonte="Transferegov e convênios cadastrados pela SECON" className="mt-3" />
             </div>
           )}
 

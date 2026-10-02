@@ -75,7 +75,7 @@ export const secretarias: Record<string, Secretaria> = {
     ],
   },
   convenios: {
-    id: 'convenios', titulo: 'Secretaria Municipal de Convênios (SECONV)', icone: FileSignature, tom: 'verde', subtitulo: 'Captação e gestão de recursos com o Estado, a União e instituições financeiras',
+    id: 'convenios', titulo: 'Secretaria Municipal de Convênios (SECON)', icone: FileSignature, tom: 'verde', subtitulo: 'Captação e gestão de recursos com o Estado, a União e instituições financeiras',
     responsavel: 'Jheny Klay — Secretária', contato: 'gabinetepms@gmail.com', atendimento: ATENDIMENTO,
     kpisExemplo: [
       { label: 'Convênios ativos', valor: '7', trend: 'up', delta: '+3 em 2025' },

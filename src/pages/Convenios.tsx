@@ -12,7 +12,7 @@ import { fmtData } from '@/lib/metas';
 import { SITUACAO_CONVENIO, TOM_CONVENIO, valorTotal, diasDeVigencia, vigenciaEmRisco, resumirConvenios } from '@/lib/convenios';
 import type { Convenio } from '@/types';
 
-/** Convênios e emendas parlamentares captados pelo município — acompanhamento da SECONV. */
+/** Convênios e emendas parlamentares captados pelo município — acompanhamento da SECON. */
 export function Convenios() {
   const { data, carregando, erro } = useCollection<Convenio>('convenios');
   const [modal, setModal] = useState<Convenio | null | 'novo'>(null);
