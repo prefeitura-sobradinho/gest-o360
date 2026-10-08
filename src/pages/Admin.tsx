@@ -8,6 +8,7 @@ import { metasExemplo, portfolioExemplo } from '@/data/seeds';
 import { conveniosIniciais } from '@/data/convenios';
 import { secretarias } from '@/data/secretarias';
 import { ImportarPortal } from '@/components/ImportarPortal';
+import { ImportarColeta } from '@/components/ImportarColeta';
 
 type Tarefa = { nome: string; desc: string; run: () => Promise<number> };
 
@@ -45,6 +46,7 @@ export function Admin() {
   return (
     <div className="space-y-5 max-w-3xl">
       <div><h2 className="page-title"><Wrench className="mr-3 text-orange" size={22} /> Ferramentas administrativas</h2><p className="text-sm text-muted mt-1">Carga inicial a partir do PPA 2026–2029 (Lei nº 712/2025). Cada importação só roda se a coleção estiver vazia.</p></div>
+      <ImportarColeta />
       <ImportarPortal />
 
       <div>

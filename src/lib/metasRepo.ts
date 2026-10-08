@@ -1,6 +1,6 @@
 import { addDoc, arrayUnion, collection, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { hojeISO } from './metas';
+import { hojeISO, progresso } from './metas';
 import type { Meta, MetaInput, StatusMeta } from '@/types';
 
 export interface Atualizacao {
@@ -10,10 +10,18 @@ export interface Atualizacao {
   autor: string;
 }
 
-/** Decide o status quando o responsável não escolheu um explicitamente. */
-function statusAutomatico(meta: Meta, valor: number): StatusMeta {
-  if (valor >= meta.valorMeta) return 'concluida';
-  if (meta.status === 'nao_iniciada' && valor > 0) return 'em_execucao';
+/**
+ * Decide o status quando o responsável não escolheu um explicitamente.
+ *
+ * Compara pelo avanço, e não pelo valor bruto: em indicadores de redução
+ * (óbitos maternos, de 1 para 0; defasagem idade-série, de 209 para 0) a meta é
+ * um número menor que a linha de base, e "valor >= meta" daria meta concluída
+ * logo na primeira medição.
+ */
+export function statusAutomatico(meta: Meta, valor: number): StatusMeta {
+  if (progresso({ ...meta, valorAtual: valor }) >= 100) return 'concluida';
+  // qualquer medição informada tira a meta de "não iniciada", mesmo que repita a linha de base
+  if (meta.status === 'nao_iniciada') return 'em_execucao';
   return meta.status;
 }
 
