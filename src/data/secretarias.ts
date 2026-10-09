@@ -118,7 +118,7 @@ export const secretarias: Record<string, Secretaria> = {
   },
   saude: {
     id: 'saude', titulo: 'Saúde — SMS', icone: HeartPulse, tom: 'azul', subtitulo: 'Atenção básica, urgência e vigilância em saúde',
-    responsavel: 'Josefa Moreira — Secretária', contato: 'sms@sobradinho.ba.gov.br', atendimento: ATENDIMENTO,
+    responsavel: 'Josefa Moreira — Secretária', contato: 'saudepms@gmail.com', atendimento: ATENDIMENTO,
     kpisExemplo: [
       { label: 'Atendimentos no período', valor: '15.000+', trend: 'up', delta: '+12% vs 2024' },
       { label: 'Atendimentos de urgência', valor: '5.900+', trend: 'up', delta: 'Ampliação de plantões' },
@@ -132,7 +132,7 @@ export const secretarias: Record<string, Secretaria> = {
   },
   setuc: {
     id: 'setuc', titulo: 'Turismo, Esporte e Cultura', icone: Music, tom: 'vinho', subtitulo: 'Identidade cultural, lazer e desenvolvimento turístico do Lago de Sobradinho',
-    responsavel: 'Patrick Carvalho — Secretário (SETUC)', contato: 'setuc@sobradinho.ba.gov.br', atendimento: ATENDIMENTO,
+    responsavel: 'Patrick Carvalho — Secretário (SETUC)', contato: 'setucpms@gmail.com', atendimento: ATENDIMENTO,
     kpisExemplo: [
       { label: 'Impacto econômico do Forró', valor: 'R$ 10 Mi+', trend: 'up', delta: 'Maior edição' },
       { label: 'Edição do Forró do Vaqueiro', valor: '21ª', trend: 'neutral', delta: 'Outubro 2025' },
@@ -146,7 +146,7 @@ export const secretarias: Record<string, Secretaria> = {
   },
   saae: {
     id: 'saae', titulo: 'SAAE — Água e Esgoto', icone: Droplets, tom: 'azul', subtitulo: 'Abastecimento de água e saneamento básico',
-    responsavel: 'Domingos Vieira — Diretor Geral', contato: 'saae@sobradinho.ba.gov.br', atendimento: ATENDIMENTO,
+    responsavel: 'Domingos Vieira — Diretor Geral', contato: 'saaesobradinho@gmail.com', atendimento: ATENDIMENTO,
     kpisExemplo: [
       { label: 'Cobertura de abastecimento', valor: '87%', trend: 'up', delta: '+3 p.p.' },
       { label: 'Ligações de esgoto novas', valor: '340', trend: 'up', delta: 'Em 2025' },
@@ -160,7 +160,7 @@ export const secretarias: Record<string, Secretaria> = {
   },
   camara: {
     id: 'camara', titulo: 'Câmara Municipal de Vereadores', icone: Landmark, tom: 'stone', subtitulo: 'Produção normativa, fiscalização e representação social',
-    responsavel: 'Câmara Municipal de Vereadores', contato: 'camara@sobradinho.ba.gov.br', atendimento: ATENDIMENTO,
+    responsavel: 'Câmara Municipal de Vereadores', contato: 'contato@camarasobradinho.ba.gov.br', atendimento: ATENDIMENTO,
     kpisExemplo: [], destaquesExemplo: [],
   },
   controladoria: {
